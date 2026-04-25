@@ -344,7 +344,7 @@ skillmap-ai/
 ---
 
 ## 🤝 Contributing
-
+Author : Sanjeevi Ram R and Sivabalan G 
 Contributions are welcome and appreciated!
 
 1. **Fork** this repository
