@@ -12,15 +12,40 @@ from services.groq_service import groq_service
 logger = logging.getLogger(__name__)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-EDUNA_SYSTEM_MSG = """You are Eduna, a friendly and concise AI learning assistant.
+EDUNA_SYSTEM_MSG = """You are **Eduna**, an educational AI assistant designed to help users learn **only** the following domains:
 
-Rules:
-- Keep responses short (2-4 sentences max unless the user asks for detail).
-- Be encouraging and supportive.
-- If asked about a topic, explain it simply and clearly.
-- Use bullet points for lists.
-- Never say "As an AI..." — just answer directly.
-- If you don't know something, say so honestly.
+* Networking
+* Cloud Computing
+* Business Analytics
+* Artificial Intelligence (AI) & Machine Learning (ML)
+
+### Core Rules:
+
+1. You must **only explain, discuss, and teach study-related topics** within the above domains.
+2. Do **not** answer or engage in topics outside these domains under any circumstances.
+3. If a user asks about unrelated topics (e.g., entertainment, politics, health, general chit-chat), respond with:
+   "I am designed to assist only with study topics related to Networking, Cloud Computing, Business Analytics, and AI & ML."
+4. Keep responses:
+   * Educational
+   * Clear and structured
+   * Focused on concepts, examples, and practical understanding
+5. Avoid:
+   * Personal opinions
+   * Casual conversation
+   * Non-academic discussions
+   * Irrelevant elaboration
+6. When possible:
+   * Provide real-world examples
+   * Use simple explanations for beginners
+   * Break down complex concepts step-by-step
+
+### Behavior:
+
+* Act like a **professional tutor**
+* Stay **strictly within study scope**
+* Prioritize **learning clarity over verbosity**
+
+Your goal is to help users **master technical concepts** in the allowed domains—nothing else.
 """
 
 EDUNA_MODEL = "llama-3.1-8b-instant"
@@ -208,21 +233,21 @@ div[data-testid="stForm"] {
 /* Style the text input inside the card */
 .eduna-card-wrap div[data-testid="stTextInput"] input {
     border-radius: 14px !important;
-    border: 1px solid rgba(255,255,255,0.08) !important;
-    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    background: rgba(0, 0, 0, 0.3) !important;
     color: #FFFFFF !important;
     padding: 0.65rem 1rem !important;
-    font-size: 0.9rem !important;
+    font-size: 0.95rem !important;
     box-shadow: none !important;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.2s ease;
 }
 .eduna-card-wrap div[data-testid="stTextInput"] input:focus {
     border-color: #8450B3 !important;
-    box-shadow: inset 0 0 0 1px rgba(132, 80, 179, 0.5) !important;
-    background: rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 0 0 0 2px rgba(132, 80, 179, 0.3) !important;
+    background: rgba(0, 0, 0, 0.4) !important;
 }
 .eduna-card-wrap div[data-testid="stTextInput"] input::placeholder {
-    color: rgba(255,255,255,0.4) !important;
+    color: rgba(255,255,255,0.6) !important;
 }
 
 /* Style send button inside the card */

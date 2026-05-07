@@ -86,6 +86,26 @@ def render():
 </style>
 """, unsafe_allow_html=True)
 
+    if not st.session_state.get("quiz_attempted", False):
+        st.markdown("""
+<div style="display:flex;justify-content:center;align-items:center;min-height:50vh;">
+  <div style="background:rgba(255,255,255,0.04);backdrop-filter:blur(12px);
+              border:1px solid rgba(255,255,255,0.08);border-radius:16px;
+              padding:2.5rem 3rem;text-align:center;max-width:480px;
+              box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem;">⚠️</div>
+    <div style="font-size:1.15rem;font-weight:700;color:#FFFFFF;margin-bottom:1rem;">
+      Please attempt the quiz first before accessing learning content.
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("📝 Go to Quiz", use_container_width=True):
+                st.session_state.page = "Quiz"
+                st.rerun()
+        st.stop()
+
     domain = st.session_state.get("selected_domain", "Networking")
     score  = st.session_state.get("score", 0)
     level  = "Intermediate" # default simplified for UI proxy map

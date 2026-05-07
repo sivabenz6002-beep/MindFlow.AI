@@ -3,7 +3,7 @@ import asyncio
 import logging
 from services.pdf_service import extract_text_from_pdf, chunk_text_optimized
 from services.rag_service import get_rag_service
-from services.ai_service import generate_rag_answer, generate_text_response
+from services.ai_service import generate_rag_answer
 from views.styles import inject_global_css
 
 logger = logging.getLogger(__name__)
@@ -196,21 +196,21 @@ PDF_CHAT_CSS = """
 /* Style text input inside card */
 .pdf-main-card div[data-testid="stTextInput"] input {
     border-radius: 14px !important;
-    border: 1px solid rgba(255,255,255,0.08) !important;
-    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    background: rgba(0, 0, 0, 0.3) !important;
     color: #FFFFFF !important;
     padding: 0.65rem 1rem !important;
-    font-size: 0.9rem !important;
+    font-size: 0.95rem !important;
     box-shadow: none !important;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.2s ease;
 }
 .pdf-main-card div[data-testid="stTextInput"] input:focus {
     border-color: #8450B3 !important;
-    box-shadow: inset 0 0 0 1px rgba(132, 80, 179, 0.5) !important;
-    background: rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 0 0 0 2px rgba(132, 80, 179, 0.3) !important;
+    background: rgba(0, 0, 0, 0.4) !important;
 }
 .pdf-main-card div[data-testid="stTextInput"] input::placeholder {
-    color: rgba(255,255,255,0.4) !important;
+    color: rgba(255,255,255,0.6) !important;
 }
 .pdf-main-card div[data-testid="stTextInput"] input:disabled {
     background: rgba(255, 255, 255, 0.02) !important;
@@ -305,27 +305,20 @@ def _answer_query(query: str):
 
     try:
         rag = get_rag_service()
-        docs = rag.query(query, n_results=3, filter={"doc_id": st.session_state.pdf_doc_id})
 
-        if docs:
-            answer = loop.run_until_complete(generate_rag_answer(query, docs))
-            if "Not found in document" in answer:
-                fallback = (
-                    f"The user asked a question about a document, but the document didn't "
-                    f"contain the answer. Please answer based on your general knowledge if "
-                    f"possible, but clarify that it is not from their document.\n\nQuestion: {query}"
-                )
-                answer = loop.run_until_complete(generate_text_response(fallback, task="learning"))
-        else:
-            fallback = (
-                f"Please answer the following question based on your general knowledge. "
-                f"Clarify that no relevant document context was found.\n\nQuestion: {query}"
-            )
-            answer = loop.run_until_complete(generate_text_response(fallback, task="learning"))
+        # Retrieve top 5 relevant chunks from the uploaded PDF only
+        docs = rag.query(query, n_results=5, filter={"doc_id": st.session_state.pdf_doc_id})
+
+        logger.info(f"[PDF Chat] Query: '{query}' | Retrieved {len(docs)} chunk(s) for doc_id='{st.session_state.pdf_doc_id}'")
+        print(f"\n🗂️  [PDF Chat] Passing {len(docs)} chunk(s) to RAG answer generator.")
+
+        # Generate answer strictly from retrieved PDF chunks
+        answer = loop.run_until_complete(generate_rag_answer(query, docs))
 
         return answer
     finally:
         loop.close()
+
 
 
 # ── Main Render ───────────────────────────────────────────────────────────────

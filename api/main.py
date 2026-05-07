@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 # Import modular routers
-from api.routes import learn, quiz, stream
+from api.routes import learn, quiz, stream, auth
 
 app = FastAPI(
     title="Agentic Adaptive Learning System API",
@@ -26,6 +26,7 @@ app.add_middleware(
 app.include_router(learn.router)
 app.include_router(quiz.router)
 app.include_router(stream.router)
+app.include_router(auth.router)
 
 @app.get("/")
 async def root():

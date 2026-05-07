@@ -149,18 +149,20 @@ async def generate_with_groq(prompt: str, task: Optional[str] = None) -> str:
     from services.groq_service import call_groq_api
     return await call_groq_api(prompt=prompt, task=task)
 
-async def generate_response(prompt: str, task: Optional[str] = None) -> Any:
+async def generate_response(prompt: str, task: Optional[str] = None) -> tuple[Any, str]:
     """
     Unified AI Orchestrator with Retries:
     - Retries up to 2 times if it hits empty text or invalid JSON.
     - Fails over to Groq with task-specific model selection.
+    Returns a tuple of (parsed_data, source_provider) where source_provider
+    is either "Ollama" or "Groq".
     """
     for attempt in range(2):
         try:
             logger.info("Using Ollama")
             res = await generate_with_ollama(prompt)
             print("🟢 Model used: Ollama (Local)")
-            return _extract_json(res)
+            return _extract_json(res), "Ollama"
         except Exception as e:
             logger.warning(f"[AI Router] Ollama attempt {attempt + 1} failed: {str(e)}")
 
@@ -168,7 +170,7 @@ async def generate_response(prompt: str, task: Optional[str] = None) -> Any:
     try:
         res = await generate_with_groq(prompt, task=task)
         print(f"🔵 Model used: Groq (Cloud) | Task: {task}")
-        return _extract_json(res)
+        return _extract_json(res), "Groq"
     except Exception as groq_err:
         logger.error(f"[AI Router] Groq fallback failed: {str(groq_err)}")
         raise RuntimeError(f"CRITICAL: Both Local and Cloud AI Generators failed: {str(groq_err)}")
@@ -228,20 +230,49 @@ async def generate_text_response(prompt: str, task: Optional[str] = None) -> str
 
 async def generate_rag_answer(query: str, chunks: list[str]) -> str:
     """
+    Generates an answer strictly from the provided PDF chunks.
+    Does NOT use general knowledge — answers ONLY from context.
+    Returns "Answer not found in uploaded document." if context is insufficient.
     """
-    context = "\n\n".join(chunks)
-    prompt = f"""You are an efficient and highly accurate AI assistant.
-Use the following Context to answer the Question directly.
-If the exact answer is not prominently found in the Context, you MUST reply EXACTLY with the phrase: "Not found in document".
-Do NOT use outside knowledge. Keep your response extremely concise and completely accurate.
+    # ── Debug: Log retrieved chunks ──────────────────────────────────────────
+    logger.debug(f"[RAG] Query: {query}")
+    logger.debug(f"[RAG] Retrieved {len(chunks)} chunk(s):")
+    for i, chunk in enumerate(chunks):
+        logger.debug(f"  Chunk {i+1}: {chunk[:200]}...")
+    print(f"\n🔍 [RAG DEBUG] Query: {query}")
+    print(f"📄 [RAG DEBUG] Retrieved {len(chunks)} chunk(s) from ChromaDB")
+    for i, chunk in enumerate(chunks):
+        print(f"  └─ Chunk {i+1}: {chunk[:200]}...")
 
-Context:
+    if not chunks:
+        logger.warning("[RAG] No chunks retrieved from ChromaDB. Returning not-found message.")
+        print("⚠️  [RAG DEBUG] No chunks found — returning default not-found message.")
+        return "Answer not found in uploaded document."
+
+    # ── Build context string ─────────────────────────────────────────────────
+    context = "\n\n---\n\n".join(chunks)
+    print(f"\n📝 [RAG DEBUG] Built context string ({len(context)} chars):\n{context[:500]}...\n")
+    logger.debug(f"[RAG] Context string ({len(context)} chars): {context[:300]}...")
+
+    # ── Build strict RAG prompt ───────────────────────────────────────────────
+    prompt = f"""You are a PDF document assistant. You MUST answer ONLY using the context extracted from the uploaded PDF document below.
+
+STRICT RULES:
+1. Answer ONLY from the provided PDF Context.
+2. Do NOT use any external or general knowledge.
+3. If the answer cannot be found in the Context, respond with EXACTLY this phrase: "Answer not found in uploaded document."
+4. Do NOT make up or infer information not present in the Context.
+5. Keep your answer concise and accurate.
+
+PDF Context:
 {context}
 
-Question:
+User Question:
 {query}
 
-Answer:"""
+Answer (based strictly on the PDF context above):"""
+
+    logger.info(f"[RAG] Sending RAG prompt to LLM for query: '{query}'")
     return await generate_text_response(prompt, task="learning")
 
 def _extract_json(raw: str) -> Any:
@@ -368,7 +399,7 @@ IMPORTANT RULES
 """.strip()
 
     logger.info("Generating learning content async | topic=%s level=%s", topic, level)
-    data = await generate_response(prompt, task="learning")
+    data, _source = await generate_response(prompt, task="learning")
 
     return LearningContent(**data)
 
@@ -413,7 +444,7 @@ Rules:
         "Generating quiz async | topic=%s level=%s num_questions=%d",
         topic, level, num_questions
     )
-    items = await generate_response(prompt, task="quiz")
+    items, _source = await generate_response(prompt, task="quiz")
 
     if not isinstance(items, list):
         raise ValueError(f"Expected a JSON array for quiz questions, got: {type(items)}")
@@ -443,9 +474,9 @@ Respond ONLY with a valid JSON object in this EXACT schema:
 """.strip()
 
     logger.info("Generating quiz question async | topic=%s difficulty=%s", topic, difficulty)
-    data = await generate_response(prompt, task="quiz")
+    data, _source = await generate_response(prompt, task="quiz")
 
-    return QuizQuestion(**data)
+    return QuizQuestion(**data, source=_source)
 
 async def generate_adaptive_questions(
     topic: str,
@@ -570,10 +601,14 @@ HARD:
 """.strip()
 
     logger.info("Generating adaptive quiz questions async | topic=%s difficulty=%s", topic, difficulty)
-    items = await generate_response(prompt, task="quiz")
+    items, source_provider = await generate_response(prompt, task="quiz")
 
     if not isinstance(items, list):
         raise ValueError(f"Expected a JSON array for quiz questions, got: {type(items)}")
 
-    return [QuizQuestion(**item) for item in items]
+    questions = []
+    for item in items:
+        item["source"] = source_provider
+        questions.append(QuizQuestion(**item))
+    return questions
 

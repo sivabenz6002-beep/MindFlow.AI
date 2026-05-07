@@ -50,7 +50,11 @@ class RAGService:
             return
 
         ids = [f"{doc_id}_{i}" for i in range(len(chunks))]
-        
+
+        # Delete existing chunks for this doc_id to prevent duplicate vector IDs on re-upload
+        logger.info(f"Deleting any existing chunks for document '{doc_id}' before adding new ones.")
+        self.delete_document(doc_id)
+
         # Prepare metadatas for each chunk
         metadatas = []
         for _ in range(len(chunks)):

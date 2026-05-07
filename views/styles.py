@@ -170,16 +170,38 @@ def inject_global_css():
         /* ════════════════════════════════════════
            SELECTBOX & TEXT INPUT GLOBAL
         ════════════════════════════════════════ */
-        .stSelectbox > div > div, .stTextInput > div > div > input {{
-            background: {BG_CARD} !important;
+        /* Target all common input containers */
+        .stSelectbox > div > div, 
+        .stTextInput > div > div > input,
+        .stTextArea > div > div > textarea,
+        .stNumberInput > div > div > input {{
+            background: rgba(0, 0, 0, 0.25) !important;
             border: 1px solid {BORDER} !important;
             border-radius: 10px !important;
-            color: {TEXT} !important;
+            color: #FFFFFF !important;
             backdrop-filter: blur(12px);
+            font-size: 0.95rem !important;
         }}
-        .stTextInput > div > div > input:focus {{
+        
+        /* Ensure placeholders are visible */
+        ::placeholder {{
+            color: rgba(255, 255, 255, 0.5) !important;
+            opacity: 1;
+        }}
+        
+        .stTextInput > div > div > input:focus,
+        .stTextArea > div > div > textarea:focus {{
             border-color: {ACCENT} !important;
             box-shadow: 0 0 0 3px rgba(132, 80, 179, 0.2) !important;
+            background: rgba(0, 0, 0, 0.35) !important;
+        }}
+        
+        /* Fix for search bars and other specific inputs */
+        [data-baseweb="input"] {{
+            background-color: transparent !important;
+        }}
+        [data-baseweb="input"] input {{
+            color: #FFFFFF !important;
         }}
 
         /* ════════════════════════════════════════
